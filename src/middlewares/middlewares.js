@@ -1,15 +1,17 @@
 const jwt = require("jsonwebtoken");
-const { getOneWork } = require("../repository/works.repository");
+const { getOneUser } = require("../repository/users.repository");
+
+// Kiểm tra các trường bắt buộc khi thêm user
 const validation = (req, res, next) => {
-  const { name } = req.body;
-  if (!name) {
-    res.status(400).json({
-      message: "Todo is required",
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) {
+    return res.status(400).json({
+      message: "Username, email và password là bắt buộc",
     });
-  } else {
-    next();
   }
+  next();
 };
+
 const verifyToken = (req, res, next) => {
   try {
     // Lấy token
@@ -28,18 +30,26 @@ const verifyToken = (req, res, next) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-const checkWorkExists = async (req, res, next) => {
-  const { nameWork } = req.body;
-  const result = await getOneWork(nameWork);
-  if (result) {
-    return res.status(400).json({
-      message: "Đã có công việc",
-    });
+
+// Kiểm tra trùng username hoặc email
+const checkUserExists = async (req, res, next) => {
+  try {
+    const { username, email } = req.body;
+    const result = await getOneUser(username, email);
+    if (result) {
+      return res.status(400).json({
+        message: "Username hoặc email đã tồn tại",
+      });
+    }
+    next();
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Server error" });
   }
-  next();
 };
+
 module.exports = {
   validation,
   verifyToken,
-  checkWorkExists,
+  checkUserExists,
 };
