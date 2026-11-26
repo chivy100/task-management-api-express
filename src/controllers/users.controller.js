@@ -1,94 +1,74 @@
-// XỬ LÝ CÁC LOGIC VÀ GỬI VỀ CLIENT
-const argon2 = require("argon2");
-const {
-  getUsers,
+const usersService = require("../services/users.service");
+const ApiResponse = require("../utils/apiResponse");
+const asyncHandler = require("../utils/asyncHandler");
+
+const getProfile = asyncHandler(async (req, res) => {
+  const profile = await usersService.getProfile(req.user.id);
+  return ApiResponse.success(res, "Lấy thông tin cá nhân thành công", profile);
+});
+
+const updateProfile = asyncHandler(async (req, res) => {
+  const updatedUser = await usersService.updateProfile(req.user.id, req.validatedBody);
+  return ApiResponse.success(res, "Cập nhật thông tin cá nhân thành công", updatedUser);
+});
+
+const getAllUsers = asyncHandler(async (req, res) => {
+  const { page, limit, search, role, is_active } = req.query;
+  const result = await usersService.getAllUsers({
+    page: Math.max(1, parseInt(page, 10) || 1),
+    limit: Math.min(100, Math.max(1, parseInt(limit, 10) || 10)),
+    search,
+    role,
+    is_active,
+  });
+
+  return ApiResponse.success(
+    res,
+    "Lấy danh sách người dùng thành công",
+    result.items,
+    200,
+    {
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
+    }
+  );
+});
+
+const getUserById = asyncHandler(async (req, res) => {
+  const user = await usersService.getUserById(req.params.id);
+  return ApiResponse.success(res, "Lấy thông tin người dùng thành công", user);
+});
+
+const createUser = asyncHandler(async (req, res) => {
+  const newUser = await usersService.createUser(req.body);
+  return ApiResponse.created(res, "Tạo người dùng mới thành công", newUser);
+});
+
+const updateUser = asyncHandler(async (req, res) => {
+  const updatedUser = await usersService.updateUser(req.params.id, req.body);
+  return ApiResponse.success(res, "Cập nhật người dùng thành công", updatedUser);
+});
+
+const setUserStatus = asyncHandler(async (req, res) => {
+  const { is_active } = req.body;
+  const user = await usersService.setUserStatus(req.params.id, is_active);
+  return ApiResponse.success(res, "Cập nhật trạng thái người dùng thành công", user);
+});
+
+const deleteUser = asyncHandler(async (req, res) => {
+  await usersService.deleteUser(req.params.id);
+  return ApiResponse.success(res, "Xóa người dùng thành công");
+});
+
+module.exports = {
+  getProfile,
+  updateProfile,
+  getAllUsers,
   getUserById,
   createUser,
   updateUser,
-  deleteUserById,
-} = require("../repository/users.repository");
-
-async function getAllUsers(req, res) {
-  try {
-    const users = await getUsers();
-    res.status(200).json(users);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
-}
-
-async function getUser(req, res) {
-  try {
-    const user = await getUserById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    res.status(200).json(user);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
-}
-
-async function addUser(req, res) {
-  try {
-    const { username, email, password, full_name, role, is_active } = req.body;
-    const hashedPassword = await argon2.hash(password);
-    const id = await createUser({
-      username,
-      email,
-      password: hashedPassword,
-      full_name,
-      role,
-      is_active,
-    });
-    const user = await getUserById(id);
-    res.status(201).json({ message: "Thêm người dùng thành công", user });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
-}
-
-async function editUser(req, res) {
-  try {
-    const { id } = req.params;
-    const existing = await getUserById(id);
-    if (!existing) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-
-    const data = { ...req.body };
-    if (data.password) {
-      data.password = await argon2.hash(data.password);
-    }
-
-    await updateUser(id, data);
-    const user = await getUserById(id);
-    res.status(200).json({ message: "Cập nhật người dùng thành công", user });
-  } catch (error) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return res
-        .status(400)
-        .json({ message: "Username hoặc email đã tồn tại" });
-    }
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
-}
-
-async function deleteUser(req, res) {
-  try {
-    const affected = await deleteUserById(req.params.id);
-    if (!affected) {
-      return res.status(404).json({ message: "Không tìm thấy người dùng" });
-    }
-    res.status(200).json({ message: "Xóa người dùng thành công" });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
-}
-
-module.exports = { getAllUsers, getUser, addUser, editUser, deleteUser };
+  setUserStatus,
+  deleteUser,
+};

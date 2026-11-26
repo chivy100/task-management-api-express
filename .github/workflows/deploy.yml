@@ -1,0 +1,44 @@
+name: CI/CD Pipeline - Task Management API
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test_and_build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 1. Checkout mã nguồn từ GitHub
+      uses: actions/checkout@v4
+
+    - name: 2. Thiết lập môi trường Node.js 20.x LTS
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+
+    - name: 3. Cài đặt Dependencies chuẩn xác
+      run: npm ci
+
+    - name: 4. Kiểm tra cú pháp toàn bộ file (Syntax Check)
+      run: |
+        node -c src/server.js
+        node -c src/app.js
+
+    # Khi đã cài jest:
+    # - name: 5. Chạy Automated Tests
+    #   run: npm test
+
+  deploy:
+    needs: test_and_build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Triển khai tới máy chủ Production qua SSH
+      run: |
+        echo "Quy trình triển khai tự động kích hoạt khi merge code vào main"
+        # ssh user@vps_ip "cd /var/www/task-api && git pull && npm ci --production && pm2 reload ecosystem.config.js"

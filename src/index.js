@@ -1,17 +1,3 @@
-const express = require("express");
-const app = express();
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const { usersRouter } = require("./routes/users.route");
-
-// Cau hinh
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-require("dotenv").config();
-// Su dung Router
-usersRouter(app);
-// Tao cong chay server
-app.listen(process.env.HOST, () => {
-  console.log(`Server is running on port ${process.env.HOST}`);
-});
+// File chuyển tiếp khởi động chuẩn kiến trúc
+// Điểm khởi nhập chính thức của hệ thống là src/server.js
+require("./server");

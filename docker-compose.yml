@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # 1. Cơ sở dữ liệu MySQL
+  mysql-db:
+    image: mysql:8.0
+    container_name: task_mysql_production
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_DATABASE: task_management_prod
+      MYSQL_USER: task_user
+      MYSQL_PASSWORD: UserPassword123!
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/database/schema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pRootPassword123!"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - task_network
+
+  # 2. Ứng dụng Backend Node.js
+  task-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task_backend_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      DB_HOST: mysql-db
+      DB_PORT: 3306
+      DB_USER: task_user
+      DB_PASSWORD: UserPassword123!
+      DB_NAME: task_management_prod
+      DB_CONNECTION_LIMIT: 20
+      JWT_SECRET: production_jwt_super_secret_min_32_characters_2026
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_SECRET: production_jwt_refresh_super_secret_min_32_chars
+      JWT_REFRESH_EXPIRES_IN: 7d
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - task_network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  task_network:
+    driver: bridge
